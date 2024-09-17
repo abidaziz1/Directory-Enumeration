@@ -42,47 +42,62 @@ def worker(domain, protocols, extensions, user_agent, timeout, proxies, status_c
 
 # Main function to set up arguments, create threads and initiate enumeration
 def main():
-    # Argument parser for command line inputs
-    parser = argparse.ArgumentParser(description="Directory Enumeration Script")
-    parser.add_argument("domain", help="Target domain (e.g., example.com)")
-    parser.add_argument("-w", "--wordlist", required=True, help="Path to the wordlist file")
-    parser.add_argument("-t", "--threads", type=int, default=10, help="Number of threads (default: 10)")
-    parser.add_argument("-p", "--protocols", nargs="+", default=["http", "https"], help="Protocols to use (default: http https)")
-    parser.add_argument("-e", "--extensions", nargs="+", default=["", ".html", ".php", ".txt"], help="File extensions (default: '', .html, .php, .txt)")
-    parser.add_argument("-u", "--user-agent", default="Mozilla/5.0", help="User-Agent header to use (default: Mozilla/5.0)")
-    parser.add_argument("-T", "--timeout", type=int, default=5, help="Request timeout in seconds (default: 5)")
-    parser.add_argument("--proxy", help="HTTP proxy (e.g., http://127.0.0.1:8080)")
-    parser.add_argument("-s", "--status-codes", nargs="+", type=int, default=[200, 301, 302, 403], help="HTTP status codes to display (default: 200, 301, 302, 403)")
-    parser.add_argument("-l", "--log-file", help="File to log valid directories")
-    args = parser.parse_args()
+    # Take user inputs instead of using argparse
+    domain = input("Enter the target domain (e.g., example.com): ")
+    wordlist_path = input("Enter the path to the wordlist file: ")
+
+    # Input examples for threads, protocols, etc.
+    try:
+        threads = int(input("Enter the number of threads (default is 10): ") or "10")
+    except ValueError:
+        threads = 10
+
+    protocols = input("Enter the protocols (e.g., http https) [default: http https]: ").split() or ["http", "https"]
+    
+    extensions = input("Enter the file extensions separated by space (e.g., '', .html, .php) [default: '', .html, .php, .txt]: ").split() or ["", ".html", ".php", ".txt"]
+    
+    user_agent = input("Enter the User-Agent (default is Mozilla/5.0): ") or "Mozilla/5.0"
+    
+    try:
+        timeout = int(input("Enter the request timeout in seconds (default is 5): ") or "5")
+    except ValueError:
+        timeout = 5
+
+    proxy = input("Enter the HTTP proxy (e.g., http://127.0.0.1:8080), or press Enter to skip: ") or None
+    
+    status_codes_input = input("Enter the status codes separated by space (e.g., 200 301 302 403) [default: 200 301 302 403]: ").split()
+    status_codes = [int(code) for code in status_codes_input] if status_codes_input else [200, 301, 302, 403]
+    
+    log_file = input("Enter the path to the log file, or press Enter to skip: ") or None
 
     # Load wordlist
     try:
-        with open(args.wordlist, "r") as f:
+        with open(wordlist_path, "r") as f:
             directories = f.read().splitlines()
     except FileNotFoundError:
-        print(f"Error: Wordlist file '{args.wordlist}' not found.")
+        print(f"Error: Wordlist file '{wordlist_path}' not found.")
         sys.exit(1)
 
     # Set up proxy dictionary
-    proxies = {"http": args.proxy, "https": args.proxy} if args.proxy else None
+    proxies = {"http": proxy, "https": proxy} if proxy else None
 
     # Add directories to the queue
     for directory in directories:
         q.put(directory)
 
     # Start threads
-    threads = []
-    for i in range(args.threads):
-        t = threading.Thread(target=worker, args=(args.domain, args.protocols, args.extensions, args.user_agent, args.timeout, proxies, args.status_codes, args.log_file))
-        threads.append(t)
+    threads_list = []
+    for i in range(threads):
+        t = threading.Thread(target=worker, args=(domain, protocols, extensions, user_agent, timeout, proxies, status_codes, log_file))
+        threads_list.append(t)
         t.start()
 
     # Wait for all threads to finish
-    for t in threads:
+    for t in threads_list:
         t.join()
 
     print("Enumeration complete.")
+
 
 if __name__ == "__main__":
     main()
